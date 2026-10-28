@@ -2,13 +2,19 @@ import * as coinRepository from '../repositories/coin.repository';
 import * as cmcService from './coinmarketcap.service';
 
 let intervalId: NodeJS.Timeout | null = null;
+let isUpdating = false;
 
 const updateAllPrices = async () => {
-  console.log(`[Scheduler] Starting scheduled price update at ${new Date().toISOString()}`);
+  if (isUpdating) {
+    console.log('[Scheduler] Previous update is still running. Skipping this cycle...');
+    return;
+  }
   
   try {
-    const coins = await coinRepository.getAllCoins();
+    isUpdating = true;
+    console.log(`[Scheduler] Starting scheduled price update at ${new Date().toISOString()}`);
     
+    const coins = await coinRepository.getAllCoins();
     for (const coin of coins) {
       try {
         const price = await cmcService.fetchPriceFromCMC(coin.symbol);
@@ -20,6 +26,8 @@ const updateAllPrices = async () => {
     }
   } catch (error) {
     console.error('[Scheduler] Critical error during update cycle:', error);
+  } finally {
+    isUpdating = false; 
   }
 };
 
